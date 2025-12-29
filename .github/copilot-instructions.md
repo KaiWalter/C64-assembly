@@ -46,8 +46,10 @@ The project uses **KickAssembler** (Java-based assembler). Build process:
 - **Status register**: Modified by instructions; cleared with `cli`, disabled with `sei`
 
 ### Memory-Mapped I/O (Critical)
-- **$d018**: Video chip register (character data location). Value `$18` = charset at $2000
-- **$0400**: Video matrix (screen RAM) - 1000 bytes for 40x25 character display
+- **$D020** (`BORDER_COLOR_ADDR`): Border color register
+- **$D021** (`BACKGROUND_COLOR_ADDR`): Background color register
+- **$D018**: Video chip register (character data location). Value `$18` = charset at $2000
+- **$0400** (`SCREEN_START`): Video matrix (screen RAM) - 1000 bytes for 40x25 character display
 - **$0400+40**: Screen line 1 (each line = 40 bytes)
 
 ### Code Patterns
@@ -58,27 +60,32 @@ The project uses **KickAssembler** (Java-based assembler). Build process:
 ### String Printing Methods
 Two approaches for displaying strings on the C64:
 
-**Method 1: BASIC Print Routine** (Kernal address `$AB1E`)
-- Setup: Load string address into A (LSB) and Y (MSB), then `jsr $AB1E`
+**Method 1: BASIC Print Routine** (using `PRINT_STRING_BASIC_ADDR`)
+- Setup: Load string address into A (LSB) and Y (MSB), then call the routine
 - String must be null-terminated (`\$00`)
 - Example from `hello.asm`:
 ```
-lda #<str_to_print    // Load low byte of string address
-ldy #>str_to_print    // Load high byte of string address
+.const PRINT_STRING_BASIC_ADDR = $AB1E
+...
+lda #<str_to_print           // Load low byte of string address
+ldy #>str_to_print           // Load high byte of string address
 jsr PRINT_STRING_BASIC_ADDR  // Call Kernal PRINT routine
 ```
 
-**Method 2: Direct Memory Write (POKE)** (Direct to `$0400`)
+**Method 2: Direct Memory Write (POKE)** (using `SCREEN_START`)
 - Writes character codes directly to screen RAM
 - More control over placement, no BASIC overhead
 - Example from `hello.asm`:
 ```
-ldx #0                // X = loop counter
+.const SCREEN_START = $0400
+.const SCREEN_DIRECT_START = SCREEN_START + $0100
+...
+ldx #0                        // X = loop counter
 DirectLoop:
-  lda str_to_poke,x   // Load byte from string
-  beq Done            // If null terminator, exit
-  sta SCREEN_DIRECT_START,x  // Write to screen memory
-  inx                 // Next character
+  lda str_to_poke,x           // Load byte from string
+  beq Done                    // If null terminator, exit
+  sta SCREEN_DIRECT_START,x   // Write to screen memory
+  inx                         // Next character
   jmp DirectLoop
 ```
 - Screen memory: 40 bytes per line, 25 lines total
@@ -100,7 +107,15 @@ DirectLoop:
 - **Collections**: `List()` with `.add()`, `.get()` methods
 - **Graphics**: `LoadPicture()` for image import, `.getSinglecolorByte()`, `.getMulticolorByte()`
 
-### Constants & Labels
+### Standard Assembler Constants
+Memory address constants should follow this naming convention:
+- `CLEAR_SCREEN_KERNAL_ADDR` = `$E544` - Kernal routine to clear screen
+- `PRINT_STRING_BASIC_ADDR` = `$AB1E` - Kernal routine to print text
+- `SCREEN_START` = `$0400` - Video matrix start
+- `BORDER_COLOR_ADDR` = `$D020` - Border color memory location
+- `BACKGROUND_COLOR_ADDR` = `$D021` - Background color memory location
+
+### Labels & Memory Directives
 - Labels end with `:` and are memory addresses
 - Memory location directive `* = $address` sets origin
 - Named segments: `* = $2000 "Charset"` for readability
