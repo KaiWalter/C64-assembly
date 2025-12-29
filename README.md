@@ -2,6 +2,8 @@
 
 C64 assembly sample programs to learn 6502 assembly and the capabilities of the C64U.
 
+The first batch of samples is copied over from <https://github.com/nealvis/c64_samples_kick>.
+
 ## Running C64U
 
 When using **KickAss** VS Code extension, `.prg` is usually launched within **VICE**.
